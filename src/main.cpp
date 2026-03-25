@@ -8,10 +8,10 @@
 // Chassis constructor
 ez::Drive chassis(
     // These are your drive motors, the first motor is used for sensing!
-    {1, 2, 3},     // Left Chassis Ports (negative port will reverse it!)
-    {-4, -5, -6},  // Right Chassis Ports (negative port will reverse it!)
+    {5, 4, 6 },     // Left Chassis Ports (negative port will reverse it!)
+    {-2, -1, -3},  // Right Chassis Ports (negative port will reverse it!)
 
-    7,      // IMU Port
+    14,      // IMU Port
     4.125,  // Wheel Diameter (Remember, 4" wheels without screw holes are actually 4.125!)
     400);   // Wheel RPM = cartridge * (motor gear / wheel gear)
 
@@ -20,8 +20,8 @@ ez::Drive chassis(
 //  - you should get positive values on the encoders going FORWARD and RIGHT
 // - `2.75` is the wheel diameter
 // - `4.0` is the distance from the center of the wheel to the center of the robot
- ez::tracking_wheel horiz_tracker(8, 2.75, 4.0);  // This tracking wheel is perpendicular to the drive wheels
- ez::tracking_wheel vert_tracker(9, 2.75, 4.0);   // This tracking wheel is parallel to the drive wheels
+ ez::tracking_wheel horiz_tracker(-16, 2.00, 3.5);  // This tracking wheel is perpendicular to the drive wheels
+ ez::tracking_wheel vert_tracker(15, 2.00, 3.0);   // This tracking wheel is parallel to the drive wheels
   
 /**
  * Runs initialization code. This occurs as soon as the program is started.
@@ -64,21 +64,19 @@ void initialize() {
       {"Middle Last\n\nMatchload All Rush, Score, Middle, Swing to Wing", MiddleLast},
       {"Side Block Grab\n\nMid Side Block Grab, Score, Matchload, Score, Wing", SideBlockGrab},
       {"Skills\n\nA fun and flashy skills routine :D", skills},
-
-
-      // {"Drive\n\nDrive forward and come back", drive_example},
-      // {"Turn\n\nTurn 3 times.", turn_example},
-      // {"Drive and Turn\n\nDrive forward, turn, come back", drive_and_turn},
-      // {"Drive and Turn\n\nSlow down during drive", wait_until_change_speed},
-      // {"Swing Turn\n\nSwing in an 'S' curve", swing_example},
-      // {"Motion Chaining\n\nDrive forward, turn, and come back, but blend everything together :D", motion_chaining},
-      // {"Combine all 3 movements", combining_movements},
-      // {"Interference\n\nAfter driving forward, robot performs differently if interfered or not", interfered_example},
-      // {"Simple Odom\n\nThis is the same as the drive example, but it uses odom instead!", odom_drive_example},
-      // {"Pure Pursuit\n\nGo to (0, 30) and pass through (6, 10) on the way.  Come back to (0, 0)", odom_pure_pursuit_example},
-      // {"Pure Pursuit Wait Until\n\nGo to (24, 24) but start running an intake once the robot passes (12, 24)", odom_pure_pursuit_wait_until_example},
-      // {"Boomerang\n\nGo to (0, 24, 45) then come back to (0, 0, 0)", odom_boomerang_example},
-      // {"Boomerang Pure Pursuit\n\nGo to (0, 24, 45) on the way to (24, 24) then come back to (0, 0, 0)", odom_boomerang_injected_pure_pursuit_example},
+      {"Drive\n\nDrive forward and come back", drive_example},
+      {"Turn\n\nTurn 3 times.", turn_example},
+      {"Drive and Turn\n\nDrive forward, turn, come back", drive_and_turn},
+      {"Drive and Turn\n\nSlow down during drive", wait_until_change_speed},
+      {"Swing Turn\n\nSwing in an 'S' curve", swing_example},
+      {"Motion Chaining\n\nDrive forward, turn, and come back, but blend everything together :D", motion_chaining},
+      {"Combine all 3 movements", combining_movements},
+      {"Interference\n\nAfter driving forward, robot performs differently if interfered or not", interfered_example},
+      {"Simple Odom\n\nThis is the same as the drive example, but it uses odom instead!", odom_drive_example},
+      {"Pure Pursuit\n\nGo to (0, 30) and pass through (6, 10) on the way.  Come back to (0, 0)", odom_pure_pursuit_example},
+      {"Pure Pursuit Wait Until\n\nGo to (24, 24) but start running an intake once the robot passes (12, 24)", odom_pure_pursuit_wait_until_example},
+      {"Boomerang\n\nGo to (0, 24, 45) then come back to (0, 0, 0)", odom_boomerang_example},
+      {"Boomerang Pure Pursuit\n\nGo to (0, 24, 45) on the way to (24, 24) then come back to (0, 0, 0)", odom_boomerang_injected_pure_pursuit_example},
       {"Measure Offsets\n\nThis will turn the robot a bunch of times and calculate your offsets for your tracking wheels.", measure_offsets},
   });
 
@@ -282,6 +280,7 @@ void opcontrol() {
 
     pros::delay(ez::util::DELAY_TIME);  // This is used for timer calculations!  Keep this ez::util::DELAY_TIME
   }
+}
 
 
 

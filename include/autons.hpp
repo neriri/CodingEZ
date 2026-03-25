@@ -1,6 +1,12 @@
 #pragma once
 
 void default_constants();
+void measure_offsets();
+void FourRushWing();
+void NineBlockRush();
+void MiddleLast();
+void SideBlockGrab();
+void skills();
 
 void drive_example();
 void turn_example();
@@ -16,8 +22,3 @@ void odom_pure_pursuit_wait_until_example();
 void odom_boomerang_example();
 void odom_boomerang_injected_pure_pursuit_example();
 void measure_offsets();
-void FourRushWing();
-void NineBlockRush();
-void MiddleLast();
-void SideBlockGrab();
-void skills();
