@@ -8,8 +8,8 @@
 // Chassis constructor
 ez::Drive chassis(
     // These are your drive motors, the first motor is used for sensing!
-    {-1, -2, -3 },     // Left Chassis Ports (negative port will reverse it!)
-    {4, 5, 6},  // Right Chassis Ports (negative port will reverse it!)
+    {-4, -5, -6 },     // Left Chassis Ports (negative port will reverse it!)
+    {1, 2, 3},  // Right Chassis Ports (negative port will reverse it!)
 
     14,      // IMU Port
     4.125,  // Wheel Diameter (Remember, 4" wheels without screw holes are actually 4.125!)
@@ -51,7 +51,8 @@ void initialize() {
 
   // Set the drive to your own constants from autons.cpp!
   default_constants();
-
+  calibrateArms();
+  
   // These are already defaulted to these buttons, but you can change the left/right curve buttons here!
   // chassis.opcontrol_curve_buttons_left_set(pros::E_CONTROLLER_DIGITAL_LEFT, pros::E_CONTROLLER_DIGITAL_RIGHT);  // If using tank, only the left side is used.
   // chassis.opcontrol_curve_buttons_right_set(pros::E_CONTROLLER_DIGITAL_Y, pros::E_CONTROLLER_DIGITAL_A);
@@ -59,12 +60,12 @@ void initialize() {
   // Autonomous Selector using LLEMU
   ez::as::auton_selector.autons_add({
 
-      {"Rush\n\nMatchload, Score 4 Blocks, Wing", FourRushWing},
-      {"9 Block Rush\n\nMatchload All Rush, Score, Wing", NineBlockRush},
-      {"Middle Last\n\nMatchload All Rush, Score, Middle, Swing to Wing", MiddleLast},
-      {"Side Block Grab\n\nMid Side Block Grab, Score, Matchload, Score, Wing", SideBlockGrab},
-      {"Skills\n\nA fun and flashy skills routine :D", skills},
-      {"Drive\n\nDrive forward and come back", drive_example},
+      // {"Rush\n\nMatchload, Score 4 Blocks, Wing", FourRushWing},
+      // {"9 Block Rush\n\nMatchload All Rush, Score, Wing", NineBlockRush},
+      // {"Middle Last\n\nMatchload All Rush, Score, Middle, Swing to Wing", MiddleLast},
+      // {"Side Block Grab\n\nMid Side Block Grab, Score, Matchload, Score, Wing", SideBlockGrab},
+      // {"Skills\n\nA fun and flashy skills routine :D", skills},
+       {"Drive\n\nDrive forward and come back", drive_example},
       {"Turn\n\nTurn 3 times.", turn_example},
       {"Drive and Turn\n\nDrive forward, turn, come back", drive_and_turn},
       {"Drive and Turn\n\nSlow down during drive", wait_until_change_speed},
@@ -84,6 +85,8 @@ void initialize() {
   chassis.initialize();
   ez::as::initialize();
   master.rumble(chassis.drive_imu_calibrated() ? "." : "---");
+  //chassis.pid_tuner_enable();
+  chassis.pid_tuner_full_enable(true);
 }
 
 /**
@@ -120,6 +123,7 @@ void competition_initialize() {
  * from where it left off.
  */
 void autonomous() {
+
   chassis.pid_targets_reset();                // Resets PID targets to 0
   chassis.drive_imu_reset();                  // Reset gyro position to 0
   chassis.drive_sensor_reset();               // Reset drive sensors to 0
@@ -217,7 +221,9 @@ void ez_template_extras() {
     // Trigger the selected autonomous routine
     if (master.get_digital(DIGITAL_B) && master.get_digital(DIGITAL_DOWN)) {
       pros::motor_brake_mode_e_t preference = chassis.drive_brake_get();
-      autonomous();
+      FourRushWing();
+      //drive_example();
+      //autonomous();
       chassis.drive_brake_set(preference);
     }
 
@@ -248,34 +254,30 @@ void ez_template_extras() {
 void opcontrol() {
   // This is preference to what you like to drive on
   chassis.drive_brake_set(MOTOR_BRAKE_COAST);
+  pros::Task lever_task(leverState,"Lever Task");
+  //pros::Task discore_task(discoreState, "Discore Task");
+
 
   while (true) {
     // Gives you some extras to make EZ-Template ezier
     ez_template_extras();
-
-    //chassis.opcontrol_tank();  // Tank control
     chassis.opcontrol_arcade_standard(ez::SPLIT);   // Standard split arcade
-    // chassis.opcontrol_arcade_standard(ez::SINGLE);  // Standard single arcade
-    //chassis.opcontrol_arcade_flipped(ez::SPLIT);    // Flipped split arcade
-    // chassis.opcontrol_arcade_flipped(ez::SINGLE);   // Flipped single arcade
+  
 
     // . . .
     // User Control Code
     // . . .
 
-    if (master.get_digital(DIGITAL_L1))
+    if (master.get_digital(DIGITAL_L2))
       intake.move(127);
-    else if (master.get_digital(DIGITAL_L2))
-      intake.move(-127);
+    else if (master.get_digital(DIGITAL_L1))
+      intake.move(-(127)*0.4);
     else
       intake.move(0);
 
-      matchLoad.button_toggle(master.get_digital(DIGITAL_DOWN));
-      gate.button_toggle(master.get_digital(DIGITAL_UP));
-      lift.button_toggle(master.get_digital(DIGITAL_RIGHT));
-  
-
-      
+      //matchLoad.button_toggle(master.get_digital(DIGITAL_DOWN));
+     // gate.button_toggle(master.get_digital(DIGITAL_X));
+      //lift.button_toggle(master.get_digital(DIGITAL_B));
       
 
     pros::delay(ez::util::DELAY_TIME);  // This is used for timer calculations!  Keep this ez::util::DELAY_TIME

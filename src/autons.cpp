@@ -15,7 +15,7 @@ const int SWING_SPEED = 110;
 ///
 void default_constants() {
   // P, I, D, and Start I
-  chassis.pid_drive_constants_set(20.0, 0.0, 100.0);         // Fwd/rev constants, used for odom and non odom motions
+  chassis.pid_drive_constants_set(0.0, 0.0, 0.0);         // Fwd/rev constants, used for odom and non odom motions
   chassis.pid_heading_constants_set(11.0, 0.0, 20.0);        // Holds the robot straight while going forward without odom
   chassis.pid_turn_constants_set(3.0, 0.05, 20.0, 15.0);     // Turn in place constants
   chassis.pid_swing_constants_set(6.0, 0.0, 65.0);           // Swing constants
@@ -48,12 +48,85 @@ void default_constants() {
   chassis.pid_angle_behavior_set(ez::shortest);  // Changes the default behavior for turning, this defaults it to the shortest path there
 }
 
+void calibrateArms() {
+    // 1. Apply a gentle downward voltage. 
+    lever.move_voltage(-3000);
+    discore.move_voltage(-3000); 
+    // 2. Wait a tiny bit to give the motor time to actually start moving
+    pros::delay(250); 
+    // 3. Create tracking flags to know when each one is finished
+    bool lever_done = false;
+    bool discore_done = false;
+        
+    // 4. We hit the bottom! Stop the motor.
+
+    while (!lever_done || !discore_done) {
+        
+        // Check the lever (if it isn't done already)
+        if (!lever_done && std::abs(lever.get_actual_velocity()) <= 2) {
+            lever.move_voltage(0); // Stop the lever
+            lever_done = true;     // Mark it as finished
+        }
+
+        // Check the discore (if it isn't done already)
+        if (!discore_done && std::abs(discore.get_actual_velocity()) <= 2) {
+            discore.move_voltage(0); // Stop the discore
+            discore_done = true;     // Mark it as finished
+        }
+
+        pros::delay(20); // Standard PROS delay
+    }
+
+    // 5. THE CRITICAL STEP: Reset the encoder to exactly 0 at this physical position
+    lever.tare_position();
+    discore.tare_position(); 
+}
+
+
+
+
+
 // . . .
 // Make your own autonomous functions here!
 // . . .
 
 void FourRushWing() {
  // Matchload
+  chassis.pid_drive_set(37_in, DRIVE_SPEED, true);
+  chassis.pid_wait_quick_chain();
+
+  chassis.pid_turn_set(90_deg, TURN_SPEED);
+  chassis.pid_wait_quick_chain();
+
+  chassis.pid_drive_set(-12_in, DRIVE_SPEED*50, true);
+  chassis.pid_wait_quick_chain();
+
+  chassis.pid_drive_set(12_in, DRIVE_SPEED, true);
+  chassis.pid_wait_quick_chain();
+
+  chassis.pid_turn_set(120_deg, TURN_SPEED);
+  chassis.pid_wait_quick_chain();
+
+  chassis.pid_turn_set(90_deg, TURN_SPEED);
+  chassis.pid_wait_quick_chain();
+
+  chassis.pid_drive_set(12_in, DRIVE_SPEED, true);
+  chassis.pid_wait_quick_chain();
+
+  chassis.pid_drive_set(-12_in, DRIVE_SPEED*50, true);
+  chassis.pid_wait_quick_chain();
+
+  chassis.pid_turn_set(60_deg, TURN_SPEED);
+  chassis.pid_wait_quick_chain();
+
+  chassis.pid_drive_set(20_in, DRIVE_SPEED, true);
+  chassis.pid_wait_quick_chain();
+
+  chassis.pid_turn_set(90_deg, TURN_SPEED);
+  chassis.pid_wait_quick_chain();
+
+  chassis.pid_drive_set(12_in, DRIVE_SPEED, true);
+  chassis.pid_wait();
  // Long Score 4 Block,
  // Wing
 }
@@ -90,8 +163,142 @@ void skills() {
 
 
 
+void leverState() {
+    bool launching = false;
+    // Hardstop Angles
+    const double maxUpAngle = 550.0; 
+    const double minDownAngle = 1.0;
+    double halfAngle = maxUpAngle / (4.0);
+
+    while (true) {
+        double current_angle = lever.get_position();
+
+        // 1. Fast Lever (R2)
+        if (master.get_digital(pros::E_CONTROLLER_DIGITAL_R2)) {
+            if (current_angle < maxUpAngle) {
+                lever.move_voltage(12000);
+            } else {
+                lever.move_voltage(1000); // Fixed colon to semicolon
+            }
+            launching = true;
+        }
+
+        // 2. Slow Lever (R1) with Dynamic Start
+        else if (master.get_digital(pros::E_CONTROLLER_DIGITAL_R1)) {
+            // First, make sure we haven't reached the absolute top
+            if (current_angle < maxUpAngle) {
+                
+                // Are we in the first 50% of the lift?
+                if (current_angle < halfAngle) {
+                    double progress = current_angle / halfAngle;
+                    double dynamicVoltage = 12000 - (progress * 7000);
+                    lever.move_voltage(dynamicVoltage);
+                } 
+                // We passed 50%, hold steady at 6000mV
+                else {
+                    lever.move_voltage(6000);
+                }
+                
+            } 
+            // We reached the absolute top, hold safely at 1V
+            else { 
+                lever.move_voltage(1000);
+            } 
+            launching = true;
+        }
+        
+        // 3. AUTOMATIC DOWN
+        else {
+            if (launching) {
+                // Pull down UNTIL we hit the target angle
+                if (current_angle > minDownAngle) {
+                    lever.move_voltage(-12000); 
+                } else {
+                    // We reached the bottom safely! 
+                    launching = false; // This triggers the 1V hold below
+                }
+            } else {
+                // Hold gently at 1V so it stays down.
+                lever.move_voltage(-1000);  
+            }
+        } 
+        
+        // Proper PROS delay syntax at the end of the while loop
+        pros::delay(20);
+    }
+}
+// Define our three possible target states
+  enum DiscoreState { DOWN, MID, UP };
+void discoreState() {
+    // Start in the DOWN position
+    DiscoreState targetState = DOWN; 
+
+    // Define your angles (You will need to tune these!)
+    const double downAngle = 5.0;
+    const double midAngle = 45.0;
+    const double upAngle = 90.0;
+    
+    // A small buffer so the motor doesn't aggressively jitter 
+    // trying to hit an exact decimal like 45.0001
+    const double margin = 3.0; 
+
+    while (true) {
+        // =======================================================
+        // 1. INPUT HANDLING (Change the Target State)
+        // =======================================================
+        
+        // Digital UP Button (The Toggle)
+        if (master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_UP)) {
+            if (targetState == UP) {
+                targetState = MID; // If we are UP (or going UP), switch to MID
+            } else {
+                targetState = UP;  // Otherwise, go UP
+            }
+        }
+        
+        // Digital Y Button (The Reset)
+        else if (master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_Y)) {
+            targetState = DOWN; // Immediately target DOWN
+        }
 
 
+        // =======================================================
+        // 2. MOTOR EXECUTION (Move and Anti-Overheat)
+        // =======================================================
+        
+        double current_angle = discore.get_position();
+        double target_angle = downAngle; // Default fallback
+
+        // Determine which angle number we are aiming for based on the state
+        if (targetState == UP) target_angle = upAngle;
+        else if (targetState == MID) target_angle = midAngle;
+        else if (targetState == DOWN) target_angle = downAngle;
+
+        // Calculate how far we are from our goal
+        double error = target_angle - current_angle;
+
+        // Are we below the target? Move UP.
+        if (error > margin) {
+            discore.move_voltage(12000);
+        } 
+        // Are we above the target? Move DOWN.
+        else if (error < -margin) {
+            discore.move_voltage(-12000);
+        } 
+        // We are within the margin! We arrived at the target.
+        else {
+            if (targetState == DOWN) {
+                // If we are at the bottom, gently push down into the hardstop
+                discore.move_voltage(-1000); 
+            } else {
+                // If we are MID or UP, apply the anti-gravity hold
+                discore.move_voltage(1000);
+            }
+        }
+
+        pros::delay(20);
+    }
+}
 
 
 
@@ -122,7 +329,7 @@ void drive_example() {
   // The third parameter is a boolean (true or false) for enabling/disabling a slew at the start of drive motions
   // for slew, only enable it when the drive distance is greater than the slew distance + a few inches
 
-  chassis.pid_drive_set(24_in, DRIVE_SPEED, true);
+  chassis.pid_drive_set(48_in, DRIVE_SPEED, true);
   chassis.pid_wait();
 
   chassis.pid_drive_set(-12_in, DRIVE_SPEED);
