@@ -1,4 +1,5 @@
 #include "main.h"
+#include "autons.hpp"
 
 /////
 // For installation, upgrading, documentations, and tutorials, check out our website!
@@ -20,8 +21,8 @@ ez::Drive chassis(
 //  - you should get positive values on the encoders going FORWARD and RIGHT
 // - `2.75` is the wheel diameter
 // - `4.0` is the distance from the center of the wheel to the center of the robot
- //ez::tracking_wheel horiz_tracker(-16, 2.00, 3.5);  // This tracking wheel is perpendicular to the drive wheels
- //ez::tracking_wheel vert_tracker(15, 2.00, 3.0);   // This tracking wheel is parallel to the drive wheels
+ ez::tracking_wheel horiz_tracker(-16, 2.00, 3.0);  // This tracking wheel is perpendicular to the drive wheels
+ ez::tracking_wheel vert_tracker(15, 2.00, 3.5);   // This tracking wheel is parallel to the drive wheels
   
 /**
  * Runs initialization code. This occurs as soon as the program is started.
@@ -34,15 +35,15 @@ void initialize() {
   ez::ez_template_print();
 
   pros::delay(500);  // Stop the user from doing anything while legacy ports configure
-
+  //ez::as::page_blank_amount(`TrackerDebug`);
   // Look at your horizontal tracking wheel and decide if it's in front of the midline of your robot or behind it
   //  - change `back` to `front` if the tracking wheel is in front of the midline
   //  - ignore this if you aren't using a horizontal tracker
-  //chassis.odom_tracker_front_set(&horiz_tracker);
+  chassis.odom_tracker_front_set(&horiz_tracker);
   // Look at your vertical tracking wheel and decide if it's to the left or right of the center of the robot
   //  - change `left` to `right` if the tracking wheel is to the right of the centerline
   //  - ignore this if you aren't using a vertical tracker
-  //chassis.odom_tracker_left_set(&vert_tracker);
+  chassis.odom_tracker_left_set(&vert_tracker);
 
   // Configure your chassis controls
   chassis.opcontrol_curve_buttons_toggle(true);   // Enables modifying the controller curve with buttons on the joysticks
@@ -60,33 +61,33 @@ void initialize() {
   // Autonomous Selector using LLEMU
   ez::as::auton_selector.autons_add({
 
-      // {"Rush\n\nMatchload, Score 4 Blocks, Wing", FourRushWing},
+      {"Rush\n\nMatchload, Score 4 Blocks, Wing", FourRushWing},
       // {"9 Block Rush\n\nMatchload All Rush, Score, Wing", NineBlockRush},
       // {"Middle Last\n\nMatchload All Rush, Score, Middle, Swing to Wing", MiddleLast},
       // {"Side Block Grab\n\nMid Side Block Grab, Score, Matchload, Score, Wing", SideBlockGrab},
       // {"Skills\n\nA fun and flashy skills routine :D", skills},
-       {"Drive\n\nDrive forward and come back", drive_example},
-      {"Turn\n\nTurn 3 times.", turn_example},
-      {"Drive and Turn\n\nDrive forward, turn, come back", drive_and_turn},
-      {"Drive and Turn\n\nSlow down during drive", wait_until_change_speed},
-      {"Swing Turn\n\nSwing in an 'S' curve", swing_example},
-      {"Motion Chaining\n\nDrive forward, turn, and come back, but blend everything together :D", motion_chaining},
-      {"Combine all 3 movements", combining_movements},
-      {"Interference\n\nAfter driving forward, robot performs differently if interfered or not", interfered_example},
-      {"Simple Odom\n\nThis is the same as the drive example, but it uses odom instead!", odom_drive_example},
-      {"Pure Pursuit\n\nGo to (0, 30) and pass through (6, 10) on the way.  Come back to (0, 0)", odom_pure_pursuit_example},
-      {"Pure Pursuit Wait Until\n\nGo to (24, 24) but start running an intake once the robot passes (12, 24)", odom_pure_pursuit_wait_until_example},
-      {"Boomerang\n\nGo to (0, 24, 45) then come back to (0, 0, 0)", odom_boomerang_example},
-      {"Boomerang Pure Pursuit\n\nGo to (0, 24, 45) on the way to (24, 24) then come back to (0, 0, 0)", odom_boomerang_injected_pure_pursuit_example},
-      {"Measure Offsets\n\nThis will turn the robot a bunch of times and calculate your offsets for your tracking wheels.", measure_offsets},
+      // {"Drive\n\nDrive forward and come back", drive_example},
+      // {"Turn\n\nTurn 3 times.", turn_example},
+      // {"Drive and Turn\n\nDrive forward, turn, come back", drive_and_turn},
+      // {"Drive and Turn\n\nSlow down during drive", wait_until_change_speed},
+      // {"Swing Turn\n\nSwing in an 'S' curve", swing_example},
+      // {"Motion Chaining\n\nDrive forward, turn, and come back, but blend everything together :D", motion_chaining},
+      // {"Combine all 3 movements", combining_movements},
+      // {"Interference\n\nAfter driving forward, robot performs differently if interfered or not", interfered_example},
+      // {"Simple Odom\n\nThis is the same as the drive example, but it uses odom instead!", odom_drive_example},
+      // {"Pure Pursuit\n\nGo to (0, 30) and pass through (6, 10) on the way.  Come back to (0, 0)", odom_pure_pursuit_example},
+      // {"Pure Pursuit Wait Until\n\nGo to (24, 24) but start running an intake once the robot passes (12, 24)", odom_pure_pursuit_wait_until_example},
+      // {"Boomerang\n\nGo to (0, 24, 45) then come back to (0, 0, 0)", odom_boomerang_example},
+      // {"Boomerang Pure Pursuit\n\nGo to (0, 24, 45) on the way to (24, 24) then come back to (0, 0, 0)", odom_boomerang_injected_pure_pursuit_example},
+      // {"Measure Offsets\n\nThis will turn the robot a bunch of times and calculate your offsets for your tracking wheels.", measure_offsets},
   });
 
   // Initialize chassis and auton selector
   chassis.initialize();
   ez::as::initialize();
   master.rumble(chassis.drive_imu_calibrated() ? "." : "---");
-  //chassis.pid_tuner_enable();
-  chassis.pid_tuner_full_enable(true);
+  chassis.pid_tuner_disable();
+  //chassis.pid_tuner_full_enable(true);
 }
 
 /**
@@ -158,6 +159,16 @@ void screen_print_tracker(ez::tracking_wheel *tracker, std::string name, int lin
   }
   ez::screen_print(tracker_value + tracker_width, line);  // Print final tracker text
 }
+// void screen_print_tracker(ez::tracking_wheel *tracker, std::string name, int line) {
+//   std::string tracker_text = "";
+//   if (tracker != nullptr) {
+//     // This displays the current physical offset (the "width")
+//     tracker_text = name + " Offset: " + util::to_string_with_precision(tracker->distance_to_center_get(), 4);
+//   } else {
+//     tracker_text = name + " Offset: ---";
+//   }
+//   ez::screen_print(tracker_text, line);
+// }
 
 /**
  * Ez screen task
@@ -196,6 +207,38 @@ void ez_screen_task() {
     pros::delay(ez::util::DELAY_TIME);
   }
 }
+// void ez_screen_task() {
+//   while (true) {
+//     if (!pros::competition::is_connected()) {
+//       // Ensure we aren't in the PID Tuner menu
+//       if (chassis.odom_enabled() && !chassis.pid_tuner_enabled()) {
+        
+//         // If "Page 15" is your first blank page, try index 14
+//         // If it doesn't show up, try index 0
+//         if (ez::as::page_blank_is_on(14)) { 
+          
+//           ez::screen_print("--- Odom Offsets ---", 1);
+
+//           // These pull the live values calculated by measure_offsets()
+//           screen_print_tracker(chassis.odom_tracker_left,  "L", 2);
+//           screen_print_tracker(chassis.odom_tracker_right, "R", 3);
+//           screen_print_tracker(chassis.odom_tracker_back,  "B", 4);
+//           screen_print_tracker(chassis.odom_tracker_front, "F", 5);
+
+//           // Keep X, Y, and Theta at the bottom
+//           ez::screen_print("x: " + util::to_string_with_precision(chassis.odom_x_get(), 1) +
+//                            " y: " + util::to_string_with_precision(chassis.odom_y_get(), 1) +
+//                            " a: " + util::to_string_with_precision(chassis.odom_theta_get(), 1), 7);
+//         }
+//       }
+//     }
+//     else {
+//       if (ez::as::page_blank_amount() > 0)
+//         ez::as::page_blank_remove_all();
+//     }
+//     pros::delay(ez::util::DELAY_TIME);
+//   }
+// }
 pros::Task ezScreenTask(ez_screen_task);
 
 /**
@@ -221,9 +264,8 @@ void ez_template_extras() {
     // Trigger the selected autonomous routine
     if (master.get_digital(DIGITAL_B) && master.get_digital(DIGITAL_DOWN)) {
       pros::motor_brake_mode_e_t preference = chassis.drive_brake_get();
+     
       FourRushWing();
-      //drive_example();
-      //autonomous();
       chassis.drive_brake_set(preference);
     }
 
@@ -255,19 +297,25 @@ void opcontrol() {
   // This is preference to what you like to drive on
   chassis.drive_brake_set(MOTOR_BRAKE_COAST);
   pros::Task lever_task(leverState,"Lever Task");
-  //pros::Task discore_task(discoreState, "Discore Task");
+ // pros::Task discore_task(discoreState, "Discore Task");
 
 
   while (true) {
     // Gives you some extras to make EZ-Template ezier
     ez_template_extras();
     chassis.opcontrol_arcade_standard(ez::SPLIT);   // Standard split arcade
-  
 
-    // . . .
+    //    // Trigger the selected autonomous routine
+    // if (master.get_digital(DIGITAL_B) && master.get_digital(DIGITAL_DOWN)) {
+    //   pros::motor_brake_mode_e_t preference = chassis.drive_brake_get();
+     
+    //   FourRushWing();
+      
+    //   chassis.drive_brake_set(preference);
+    // }
+
+
     // User Control Code
-    // . . .
-
     if (master.get_digital(DIGITAL_L2))
       intake.move(127);
     else if (master.get_digital(DIGITAL_L1))
@@ -275,9 +323,9 @@ void opcontrol() {
     else
       intake.move(0);
 
-      //matchLoad.button_toggle(master.get_digital(DIGITAL_DOWN));
+     // matchLoad.button_toggle(master.get_digital(DIGITAL_DOWN));
      // gate.button_toggle(master.get_digital(DIGITAL_X));
-      //lift.button_toggle(master.get_digital(DIGITAL_B));
+     // lift.button_toggle(master.get_digital(DIGITAL_B));
       
 
     pros::delay(ez::util::DELAY_TIME);  // This is used for timer calculations!  Keep this ez::util::DELAY_TIME

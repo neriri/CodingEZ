@@ -1,4 +1,6 @@
+#include "EZ-Template/util.hpp"
 #include "main.h"
+#include "subsystems.hpp"
 
 /////
 // For installation, upgrading, documentations, and tutorials, check out our website!
@@ -15,12 +17,12 @@ const int SWING_SPEED = 110;
 ///
 void default_constants() {
   // P, I, D, and Start I
-  chassis.pid_drive_constants_set(0.0, 0.0, 0.0);         // Fwd/rev constants, used for odom and non odom motions
-  chassis.pid_heading_constants_set(11.0, 0.0, 20.0);        // Holds the robot straight while going forward without odom
-  chassis.pid_turn_constants_set(3.0, 0.05, 20.0, 15.0);     // Turn in place constants
+  chassis.pid_drive_constants_set(40, 0.0, 400.0);         // Fwd/rev constants, used for odom and non odom motions chassis.pid_drive_constants_set(40, 0.0, 400.0);         
+  chassis.pid_heading_constants_set(20.0, 0.0, 20.0);        // Holds the robot straight while going forward without odom
+  chassis.pid_turn_constants_set(16.0, 0.1, 160.0, 10.0);     // Turn in place constants chassis.pid_turn_constants_set(16.0, 0.1, 160.0, 10.0);  
   chassis.pid_swing_constants_set(6.0, 0.0, 65.0);           // Swing constants
-  chassis.pid_odom_angular_constants_set(6.5, 0.0, 52.5);    // Angular control for odom motions
-  chassis.pid_odom_boomerang_constants_set(5.8, 0.0, 32.5);  // Angular control for boomerang motions
+  chassis.pid_odom_angular_constants_set(6.5, 0.0, 65);    // Angular control for odom motions
+  chassis.pid_odom_boomerang_constants_set(60, 0.0, 400);  // Angular control for boomerang motions //chassis.pid_odom_boomerang_constants_set(5.8, 0.0, 32.5);  chassis.pid_odom_boomerang_constants_set(60, 0.0, 400);
 
   // Exit conditions
   chassis.pid_turn_exit_condition_set(90_ms, 3_deg, 250_ms, 7_deg, 500_ms, 500_ms);
@@ -39,7 +41,7 @@ void default_constants() {
 
   // The amount that turns are prioritized over driving in odom motions
   // - if you have tracking wheels, you can run this higher.  1.0 is the max
-  chassis.odom_turn_bias_set(0.9);
+  chassis.odom_turn_bias_set(1.0);
 
   chassis.odom_look_ahead_set(7_in);           // This is how far ahead in the path the robot looks at
   chassis.odom_boomerang_distance_set(16_in);  // This sets the maximum distance away from target that the carrot point can be
@@ -91,42 +93,29 @@ void calibrateArms() {
 // . . .
 
 void FourRushWing() {
+
+  matchLoad.set(true);
+  lift.set(true);
+  intake.move(127);
+
+  chassis.pid_odom_set({{{0_in, 48_in}, fwd, DRIVE_SPEED}},
+                       true);
+  chassis.pid_wait_until_index(1);  
+  chassis.pid_turn_set(-90_deg, TURN_SPEED);
+  chassis.pid_wait_quick_chain();  
+  chassis.pid_odom_set(-12_in, DRIVE_SPEED);
+  chassis.pid_wait_until_index(1);  
+
+  chassis.pid_odom_set({{{-24_in, 30_in}, fwd, DRIVE_SPEED}},
+                       true);
+  chassis.pid_wait_until_index(1);  // Long goal
+  fireLever.fast();  
+  intake.move(0);  // Turn the intake off
+
+
+
  // Matchload
-  chassis.pid_drive_set(37_in, DRIVE_SPEED, true);
-  chassis.pid_wait_quick_chain();
-
-  chassis.pid_turn_set(90_deg, TURN_SPEED);
-  chassis.pid_wait_quick_chain();
-
-  chassis.pid_drive_set(-12_in, DRIVE_SPEED*50, true);
-  chassis.pid_wait_quick_chain();
-
-  chassis.pid_drive_set(12_in, DRIVE_SPEED, true);
-  chassis.pid_wait_quick_chain();
-
-  chassis.pid_turn_set(120_deg, TURN_SPEED);
-  chassis.pid_wait_quick_chain();
-
-  chassis.pid_turn_set(90_deg, TURN_SPEED);
-  chassis.pid_wait_quick_chain();
-
-  chassis.pid_drive_set(12_in, DRIVE_SPEED, true);
-  chassis.pid_wait_quick_chain();
-
-  chassis.pid_drive_set(-12_in, DRIVE_SPEED*50, true);
-  chassis.pid_wait_quick_chain();
-
-  chassis.pid_turn_set(60_deg, TURN_SPEED);
-  chassis.pid_wait_quick_chain();
-
-  chassis.pid_drive_set(20_in, DRIVE_SPEED, true);
-  chassis.pid_wait_quick_chain();
-
-  chassis.pid_turn_set(90_deg, TURN_SPEED);
-  chassis.pid_wait_quick_chain();
-
-  chassis.pid_drive_set(12_in, DRIVE_SPEED, true);
-  chassis.pid_wait();
+ 
  // Long Score 4 Block,
  // Wing
 }
@@ -163,18 +152,36 @@ void skills() {
 
 
 
+
 void leverState() {
     bool launching = false;
     // Hardstop Angles
-    const double maxUpAngle = 550.0; 
+    const double maxUpAngle = 600.0; 
     const double minDownAngle = 1.0;
     double halfAngle = maxUpAngle / (4.0);
 
     while (true) {
         double current_angle = lever.get_position();
+        LeverMode current_mode = LEVER_IDLE;
+
+        // AUTO checking
+        if (pros::competition::is_autonomous() || is_testing_auton) {
+            current_mode = auto_lever_mode; 
+          }
+        else {
+            if (master.get_digital(pros::E_CONTROLLER_DIGITAL_R2)) {
+                current_mode = LEVER_FAST;
+            } else if (master.get_digital(pros::E_CONTROLLER_DIGITAL_R1)) {
+                current_mode = LEVER_SLOW;
+            }
+        }
 
         // 1. Fast Lever (R2)
-        if (master.get_digital(pros::E_CONTROLLER_DIGITAL_R2)) {
+        if (current_mode == LEVER_FAST) {
+            if (!launching) {
+                gate.set(true);   // Command the gate to open
+                pros::delay(100); // Wait 100ms for the physical metal to move
+            }
             if (current_angle < maxUpAngle) {
                 lever.move_voltage(12000);
             } else {
@@ -184,7 +191,11 @@ void leverState() {
         }
 
         // 2. Slow Lever (R1) with Dynamic Start
-        else if (master.get_digital(pros::E_CONTROLLER_DIGITAL_R1)) {
+        else if (current_mode == LEVER_SLOW) {
+          if (!launching) {
+                gate.set(true);   // Command the gate to open
+                pros::delay(100); // Wait 100ms for the physical metal to move
+            }
             // First, make sure we haven't reached the absolute top
             if (current_angle < maxUpAngle) {
                 
@@ -216,6 +227,7 @@ void leverState() {
                 } else {
                     // We reached the bottom safely! 
                     launching = false; // This triggers the 1V hold below
+                    gate.set(false);
                 }
             } else {
                 // Hold gently at 1V so it stays down.
@@ -228,80 +240,74 @@ void leverState() {
     }
 }
 // Define our three possible target states
-  enum DiscoreState { DOWN, MID, UP };
+
+enum DiscoreState { DOWN, MID, UP };
+
 void discoreState() {
-    // Start in the DOWN position
     DiscoreState targetState = DOWN; 
 
-    // Define your angles (You will need to tune these!)
-    const double downAngle = 5.0;
-    const double midAngle = 45.0;
-    const double upAngle = 90.0;
+    // Dynamic Angles
+    const double upAngle = 45.0;   
+    double midOffset = 0.0;        
+    double midAngle = (upAngle / 5.0) + midOffset;
     
-    // A small buffer so the motor doesn't aggressively jitter 
-    // trying to hit an exact decimal like 45.0001
-    const double margin = 3.0; 
+    // --- TUNED VARIABLES ---
+    double kP = 150.0;            
+    double anti_gravity = 2000.0; // INCREASED: Tune this higher if it still sags at MID!
+    double deadband = 3.0;        // Margin of error 
 
     while (true) {
-        // =======================================================
-        // 1. INPUT HANDLING (Change the Target State)
-        // =======================================================
-        
-        // Digital UP Button (The Toggle)
+        // 1. INPUT HANDLING
         if (master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_UP)) {
-            if (targetState == UP) {
-                targetState = MID; // If we are UP (or going UP), switch to MID
-            } else {
-                targetState = UP;  // Otherwise, go UP
-            }
-        }
-        
-        // Digital Y Button (The Reset)
-        else if (master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_Y)) {
-            targetState = DOWN; // Immediately target DOWN
+            targetState = UP;
+        } 
+        else if (master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_RIGHT)) {
+            targetState = MID;
+        } 
+        else if (master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_LEFT)) {
+            targetState = DOWN;
         }
 
-
-        // =======================================================
-        // 2. MOTOR EXECUTION (Move and Anti-Overheat)
-        // =======================================================
-        
-        double current_angle = discore.get_position();
-        double target_angle = downAngle; // Default fallback
-
-        // Determine which angle number we are aiming for based on the state
-        if (targetState == UP) target_angle = upAngle;
-        else if (targetState == MID) target_angle = midAngle;
-        else if (targetState == DOWN) target_angle = downAngle;
-
-        // Calculate how far we are from our goal
-        double error = target_angle - current_angle;
-
-        // Are we below the target? Move UP.
-        if (error > margin) {
-            discore.move_voltage(12000);
+        // 2. MOTOR EXECUTION
+        if (targetState == DOWN) {
+            discore.move_voltage(-1000); 
         } 
-        // Are we above the target? Move DOWN.
-        else if (error < -margin) {
-            discore.move_voltage(-12000);
-        } 
-        // We are within the margin! We arrived at the target.
         else {
-            if (targetState == DOWN) {
-                // If we are at the bottom, gently push down into the hardstop
-                discore.move_voltage(-1000); 
-            } else {
-                // If we are MID or UP, apply the anti-gravity hold
-                discore.move_voltage(1000);
+            double current_angle = discore.get_position();
+            double target_angle = (targetState == UP) ? upAngle : midAngle;
+            
+            double error = target_angle - current_angle;
+            double commanded_voltage;
+
+            // Are we at the target? Apply holding voltage.
+            if (std::abs(error) < deadband) {
+                commanded_voltage = anti_gravity; 
+            } 
+            // We need to move! Calculate the power.
+            else {
+                commanded_voltage = (error * kP) + anti_gravity;
+
+                // --- THE BREAKOUT CLAMP ---
+                // If we need to go UP, but the math is too weak, force a 5000mV push
+                if (error > 0 && commanded_voltage < 5000) {
+                    commanded_voltage = 5000; 
+                }
+                // If we need to go DOWN, but the math is fighting gravity, force a -3000mV pull
+                else if (error < 0 && commanded_voltage > -3000) {
+                    commanded_voltage = -3000; 
+                }
             }
+            
+            // Safety Limits
+            if (commanded_voltage > 12000) commanded_voltage = 12000;
+            if (commanded_voltage < -12000) commanded_voltage = -12000;
+            
+            discore.move_voltage(commanded_voltage);
         }
 
         pros::delay(20);
     }
 }
-
-
-
 
 
 
@@ -332,10 +338,10 @@ void drive_example() {
   chassis.pid_drive_set(48_in, DRIVE_SPEED, true);
   chassis.pid_wait();
 
-  chassis.pid_drive_set(-12_in, DRIVE_SPEED);
+  chassis.pid_drive_set(-24_in, DRIVE_SPEED);
   chassis.pid_wait();
 
-  chassis.pid_drive_set(-12_in, DRIVE_SPEED);
+  chassis.pid_drive_set(-24_in, DRIVE_SPEED);
   chassis.pid_wait();
 }
 
@@ -515,13 +521,13 @@ void odom_drive_example() {
   // You can replace pid_drive_set with pid_odom_set and your robot will
   // have better error correction.
 
-  chassis.pid_odom_set(24_in, DRIVE_SPEED, true);
+  chassis.pid_odom_set(48_in, DRIVE_SPEED, true);
   chassis.pid_wait();
 
-  chassis.pid_odom_set(-12_in, DRIVE_SPEED);
+  chassis.pid_odom_set(-24_in, DRIVE_SPEED);
   chassis.pid_wait();
 
-  chassis.pid_odom_set(-12_in, DRIVE_SPEED);
+  chassis.pid_odom_set(-24_in, DRIVE_SPEED);
   chassis.pid_wait();
 }
 
@@ -551,9 +557,9 @@ void odom_pure_pursuit_wait_until_example() {
                         {{24_in, 24_in}, fwd, DRIVE_SPEED}},
                        true);
   chassis.pid_wait_until_index(1);  // Waits until the robot passes 12, 24
-  // Intake.move(127);  // Set your intake to start moving once it passes through the second point in the index
+   intake.move(127);  // Set your intake to start moving once it passes through the second point in the index
   chassis.pid_wait();
-  // Intake.move(0);  // Turn the intake off
+  intake.move(0);  // Turn the intake off
 }
 
 
@@ -605,7 +611,7 @@ void measure_offsets() {
     chassis.pid_targets_reset();
     chassis.drive_imu_reset();
     chassis.drive_sensor_reset();
-    chassis.drive_brake_set(MOTOR_BRAKE_HOLD);
+    //chassis.drive_brake_set(MOTOR_BRAKE_HOLD);
     chassis.odom_xyt_set(0_in, 0_in, 0_deg);
     double imu_start = chassis.odom_theta_get();
     double target = i % 2 == 0 ? 90 : 270;  // Switch the turn target every run from 270 to 90
