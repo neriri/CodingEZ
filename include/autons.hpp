@@ -1,5 +1,6 @@
 #pragma once
 //Functions
+#include "subsystems.hpp"
 void default_constants();
 void measure_offsets();
 void calibrateArms();
@@ -14,7 +15,9 @@ void SideBlockGrab();
 void skills();
 
 
-
+//Optical
+void grab_blue_reject_red();
+void grab_red_reject_blue();
 
 
 

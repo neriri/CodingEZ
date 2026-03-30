@@ -30,9 +30,16 @@ ez::Drive chassis(
  * All other competition modes are blocked by initialize; it is recommended
  * to keep execution time for this mode under a few seconds.
  */
+
+ // Optical
+pros::Optical color_sensor(13);
+
+ 
+
 void initialize() {
   // Print our branding over your terminal :D
   ez::ez_template_print();
+  color_sensor.set_led_pwm(100);
 
   pros::delay(500);  // Stop the user from doing anything while legacy ports configure
   //ez::as::page_blank_amount(`TrackerDebug`);

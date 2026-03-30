@@ -1,5 +1,7 @@
+#include "autons.hpp"
 #include "EZ-Template/util.hpp"
 #include "main.h"
+#include "pros/rtos.hpp"
 #include "subsystems.hpp"
 
 /////
@@ -93,23 +95,47 @@ void calibrateArms() {
 // . . .
 
 void FourRushWing() {
-
   matchLoad.set(true);
   lift.set(true);
   intake.move(127);
-
-  chassis.pid_odom_set({{{0_in, 48_in}, fwd, DRIVE_SPEED}},
+  
+  // Into the Matchload!
+  chassis.pid_odom_set({{{0_in, 29_in}, fwd, DRIVE_SPEED}},
                        true);
-  chassis.pid_wait_until_index(1);  
-  chassis.pid_turn_set(-90_deg, TURN_SPEED);
+  chassis.pid_wait(); 
+  chassis.pid_turn_set(-90_deg, TURN_SPEED); 
   chassis.pid_wait_quick_chain();  
-  chassis.pid_odom_set(-12_in, DRIVE_SPEED);
+  chassis.pid_odom_set(-14_in, DRIVE_SPEED);
   chassis.pid_wait_until_index(1);  
-
-  chassis.pid_odom_set({{{-24_in, 30_in}, fwd, DRIVE_SPEED}},
+  pros::delay(1000);
+  chassis.pid_odom_set(14_in, DRIVE_SPEED);
+  chassis.pid_wait();
+  chassis.pid_turn_set(-120_deg, TURN_SPEED);
+  matchLoad.set(false);
+  chassis.pid_wait();
+    chassis.pid_odom_set(-10_in, DRIVE_SPEED);
+  chassis.pid_wait_quick_chain();  
+  grab_red_reject_blue();
+  
+  chassis.pid_odom_set({{{-20_in, 29_in}, fwd, DRIVE_SPEED}},
                        true);
-  chassis.pid_wait_until_index(1);  // Long goal
-  fireLever.fast();  
+  chassis.pid_wait();              
+  chassis.pid_odom_set(4_in, 127); // Alligner Lock
+  chassis.pid_wait();  // Long goal 
+
+    //Scoring
+  fireLever.fast(); 
+  pros::delay(200);
+  fireLever.down();
+  //Second Try if Ever
+  fireLever.fast(); 
+  pros::delay(200);
+  fireLever.down();
+  // Third Try
+  fireLever.fast(); 
+  pros::delay(200);
+  fireLever.down();
+
   intake.move(0);  // Turn the intake off
 
 
@@ -309,18 +335,64 @@ void discoreState() {
     }
 }
 
+// Optical
 
+// 1. Write the simple color check function
+void grab_red_reject_blue() {
+    
+    intake.move(-70); // Reverse the intake slowly to push out the blue blocks
+    
+    int timeout = 0;
+    
+    // Loop for a maximum of 3 seconds (300 loops * 10ms)
+    while (timeout < 3000) { 
+        
+        // Is a ring close to the sensor?
+        if (color_sensor.get_proximity() > 200) {
+            
+            double hue = color_sensor.get_hue();
+            
+            // Is the ring RED? (Red is near 0 or 360 degrees)
+            if (hue < 20 || hue > 340) {
+                break; // We found Red! Stop reversing immediately.
+            }
+        }
+        
+        pros::delay(10); // Required delay
+        timeout++;
+    }
+    
+    // Make the intake go forward to grab the red ring
+    intake.move(127); 
+}
 
-
-
-
-
-
-
-
-
-
-
+void grab_blue_reject_red() {
+    
+    intake.move(-60); // Reverse the intake slowly to push out the red ring
+    
+    int timeout = 0;
+    
+    // Loop for a maximum of 3 seconds (300 loops * 10ms)
+    while (timeout < 300) { 
+        
+        // Is a ring close to the sensor?
+        if (color_sensor.get_proximity() > 200) {
+            
+            double hue = color_sensor.get_hue();
+            
+            // Is the ring BLUE? (Blue is usually between 180 and 260 degrees)
+            if (hue > 180 && hue < 260) {
+                break; // We found Blue! Stop reversing immediately.
+            }
+        }
+        
+        pros::delay(10); // Required delay
+        timeout++;
+    }
+    
+    // Make the intake go forward to grab the blue ring
+    intake.move(127); 
+}
 
 
 
