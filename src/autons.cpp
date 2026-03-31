@@ -94,7 +94,7 @@ void calibrateArms() {
 // Make your own autonomous functions here!
 // . . .
 
-void FourRushWing() {
+void RedRightFourRushWing() {
   matchLoad.set(true);
   lift.set(true);
   intake.move(127);
@@ -146,6 +146,60 @@ void FourRushWing() {
  // Wing
 }
 
+void RedLeftFourRushWing() {
+  matchLoad.set(true);
+  lift.set(true);
+  intake.move(127);
+  
+  // Into the Matchload!
+  chassis.pid_odom_set({{{0_in, 29_in}, fwd, DRIVE_SPEED}},
+                       true);
+  chassis.pid_wait(); 
+  chassis.pid_turn_set(-90_deg, TURN_SPEED); 
+  chassis.pid_wait_quick_chain();  
+  chassis.pid_odom_set(-14_in, DRIVE_SPEED);
+  chassis.pid_wait_until_index(1);  
+  pros::delay(1000);
+  chassis.pid_odom_set(14_in, DRIVE_SPEED);
+  chassis.pid_wait();
+  chassis.pid_turn_set(-120_deg, TURN_SPEED);
+  matchLoad.set(false);
+  chassis.pid_wait();
+    chassis.pid_odom_set(-10_in, DRIVE_SPEED);
+  chassis.pid_wait_quick_chain();  
+  grab_red_reject_blue();
+  
+  chassis.pid_odom_set({{{-20_in, 29_in}, fwd, DRIVE_SPEED}},
+                       true);
+  chassis.pid_wait();              
+  chassis.pid_odom_set(4_in, 127); // Alligner Lock
+  chassis.pid_wait();  // Long goal 
+
+    //Scoring
+  fireLever.fast(); 
+  pros::delay(200);
+  fireLever.down();
+  //Second Try if Ever
+  fireLever.fast(); 
+  pros::delay(200);
+  fireLever.down();
+  // Third Try
+  fireLever.fast(); 
+  pros::delay(200);
+  fireLever.down();
+
+  intake.move(0);  // Turn the intake off
+
+
+
+ // Matchload
+ 
+ // Long Score 4 Block,
+ // Wing
+}
+
+
+
 void NineBlockRush()  {
   // Matchload All Rush
   // Offset, Reverse Intake slow
@@ -182,7 +236,7 @@ void skills() {
 void leverState() {
     bool launching = false;
     // Hardstop Angles
-    const double maxUpAngle = 600.0; 
+    const double maxUpAngle = 700.0; 
     const double minDownAngle = 1.0;
     double halfAngle = maxUpAngle / (4.0);
 

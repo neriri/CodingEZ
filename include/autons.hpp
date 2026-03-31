@@ -7,8 +7,9 @@ void calibrateArms();
 void leverState();
 void discoreState();
 
-//Routing
-void FourRushWing();
+//Routing Red Side
+void RedRightFourRushWing();
+void RedLeftFourRushWing();
 void NineBlockRush();
 void MiddleLast();
 void SideBlockGrab();

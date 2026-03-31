@@ -39,7 +39,6 @@ pros::Optical color_sensor(13);
 void initialize() {
   // Print our branding over your terminal :D
   ez::ez_template_print();
-  color_sensor.set_led_pwm(100);
 
   pros::delay(500);  // Stop the user from doing anything while legacy ports configure
   //ez::as::page_blank_amount(`TrackerDebug`);
@@ -59,7 +58,7 @@ void initialize() {
 
   // Set the drive to your own constants from autons.cpp!
   default_constants();
-  calibrateArms();
+  
   
   // These are already defaulted to these buttons, but you can change the left/right curve buttons here!
   // chassis.opcontrol_curve_buttons_left_set(pros::E_CONTROLLER_DIGITAL_LEFT, pros::E_CONTROLLER_DIGITAL_RIGHT);  // If using tank, only the left side is used.
@@ -68,10 +67,11 @@ void initialize() {
   // Autonomous Selector using LLEMU
   ez::as::auton_selector.autons_add({
 
-      {"Rush\n\nMatchload, Score 4 Blocks, Wing", FourRushWing},
-      // {"9 Block Rush\n\nMatchload All Rush, Score, Wing", NineBlockRush},
-      // {"Middle Last\n\nMatchload All Rush, Score, Middle, Swing to Wing", MiddleLast},
-      // {"Side Block Grab\n\nMid Side Block Grab, Score, Matchload, Score, Wing", SideBlockGrab},
+      {"Red Right Side\n\nMatchload, Score 4 Blocks, Wing", RedRightFourRushWing},
+      {"Red Left Side\n\nMatchload, Score 4 Blocks, Wing", RedLeftFourRushWing},
+       {"9 Block Rush\n\nMatchload All Rush, Score, Wing", NineBlockRush},
+       {"Middle Last\n\nMatchload All Rush, Score, Middle, Swing to Wing", MiddleLast},
+       {"Side Block Grab\n\nMid Side Block Grab, Score, Matchload, Score, Wing", SideBlockGrab},
       // {"Skills\n\nA fun and flashy skills routine :D", skills},
       // {"Drive\n\nDrive forward and come back", drive_example},
       // {"Turn\n\nTurn 3 times.", turn_example},
@@ -91,9 +91,13 @@ void initialize() {
 
   // Initialize chassis and auton selector
   chassis.initialize();
-  ez::as::initialize();
+  calibrateArms();
+  color_sensor.set_led_pwm(100);
+
   master.rumble(chassis.drive_imu_calibrated() ? "." : "---");
   chassis.pid_tuner_disable();
+  ez::as::initialize();
+
   //chassis.pid_tuner_full_enable(true);
 }
 
@@ -137,7 +141,7 @@ void autonomous() {
   chassis.drive_sensor_reset();               // Reset drive sensors to 0
   chassis.odom_xyt_set(0_in, 0_in, 0_deg);    // Set the current position, you can start at a specific position with this
   chassis.drive_brake_set(MOTOR_BRAKE_HOLD);  // Set motors to hold.  This helps autonomous consistency
-
+  ez::as::auton_selector.selected_auton_call();
   /*
   Odometry and Pure Pursuit are not magic
 
@@ -246,7 +250,7 @@ void ez_screen_task() {
 //     pros::delay(ez::util::DELAY_TIME);
 //   }
 // }
-pros::Task ezScreenTask(ez_screen_task);
+//pros::Task ezScreenTask(ez_screen_task);
 
 /**
  * Gives you some extras to run in your opcontrol:
@@ -272,7 +276,7 @@ void ez_template_extras() {
     if (master.get_digital(DIGITAL_B) && master.get_digital(DIGITAL_DOWN)) {
       pros::motor_brake_mode_e_t preference = chassis.drive_brake_get();
      
-      FourRushWing();
+      //FourRushWing();
       chassis.drive_brake_set(preference);
     }
 
@@ -312,14 +316,7 @@ void opcontrol() {
     ez_template_extras();
     chassis.opcontrol_arcade_standard(ez::SPLIT);   // Standard split arcade
 
-    //    // Trigger the selected autonomous routine
-    // if (master.get_digital(DIGITAL_B) && master.get_digital(DIGITAL_DOWN)) {
-    //   pros::motor_brake_mode_e_t preference = chassis.drive_brake_get();
-     
-    //   FourRushWing();
-      
-    //   chassis.drive_brake_set(preference);
-    // }
+  
 
 
     // User Control Code
@@ -330,9 +327,9 @@ void opcontrol() {
     else
       intake.move(0);
 
-     // matchLoad.button_toggle(master.get_digital(DIGITAL_DOWN));
-     // gate.button_toggle(master.get_digital(DIGITAL_X));
-     // lift.button_toggle(master.get_digital(DIGITAL_B));
+      matchLoad.button_toggle(master.get_digital(DIGITAL_DOWN));
+      gate.button_toggle(master.get_digital(DIGITAL_X));
+      lift.button_toggle(master.get_digital(DIGITAL_B));
       
 
     pros::delay(ez::util::DELAY_TIME);  // This is used for timer calculations!  Keep this ez::util::DELAY_TIME
